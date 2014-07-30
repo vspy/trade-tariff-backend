@@ -138,10 +138,14 @@ module TariffSynchronizer
           }.inspect
         end
 
+        sql = event.payload[:sql].squeeze(' ')
+
+        Rails.logger.info sql
+
         @database_queries.push(
           "(%{class_name}) %{sql} %{binds}" % {
             class_name: event.payload[:name],
-            sql: event.payload[:sql].squeeze(' '),
+            sql: sql,
             binds: binds
           }
         )

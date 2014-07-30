@@ -131,6 +131,7 @@ module TariffSynchronizer
       end
 
       update_range_in_days.each do |day|
+        Rails.logger = ActiveSupport::BufferedLogger.new("#{Rails.root}/log/sync/#{day}.log")
         applied_updates << perform_update(TaricUpdate, day)
         applied_updates << perform_update(ChiefUpdate, day)
       end
