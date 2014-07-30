@@ -129,7 +129,7 @@ module TariffSynchronizer
       # Based on http://goo.gl/vpTFyT (SequelRails LogSubscriber)
       @database_queries = RingBuffer.new(10)
 
-      ActiveSupport::Notifications.subscribe /sql\.sequel/ do |*args|
+      subscriber = ActiveSupport::Notifications.subscribe /sql\.sequel/ do |*args|
         event = ActiveSupport::Notifications::Event.new(*args)
 
         binds = unless event.payload.fetch(:binds, []).blank?
@@ -168,6 +168,8 @@ module TariffSynchronizer
         exception: e, update: self, database_queries: @database_queries
       )
       raise Sequel::Rollback
+    ensure
+      ActiveSupport::Notifications.unsubscribe(subscriber)
     end
 
     class << self
