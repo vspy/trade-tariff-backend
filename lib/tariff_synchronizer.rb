@@ -67,6 +67,9 @@ module TariffSynchronizer
   mattr_accessor :warning_day_count
   self.warning_day_count = 3
 
+  # log by days
+  mattr_accessor :day_logger
+
   delegate :instrument, :subscribe, to: ActiveSupport::Notifications
 
   # Download pending updates for Taric and National data
@@ -131,7 +134,6 @@ module TariffSynchronizer
       end
 
       update_range_in_days.each do |day|
-        Rails.logger = ActiveSupport::BufferedLogger.new("#{Rails.root}/log/sync/#{day}.log")
         applied_updates << perform_update(TaricUpdate, day)
         applied_updates << perform_update(ChiefUpdate, day)
       end
@@ -221,6 +223,9 @@ module TariffSynchronizer
   private
 
   def perform_update(update_type, day)
+    self.day_logger = ActiveSupport::BufferedLogger.new(
+      "#{Rails.root}/log/sync/#{day}-#{update_type.to_s.parameterize}.log"
+    )
     updates = update_type.pending_at(day).to_a
     updates.each { |update| update.apply }
     updates
