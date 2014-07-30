@@ -158,33 +158,32 @@ module TariffSynchronizer
       date = Date.parse(rollback_date.to_s)
 
       (date..Date.today).to_a.reverse.each do |date_for_rollback|
-        Sequel::Model.db.transaction do
-          oplog_based_models.each do |model|
-            model.operation_klass.where { operation_date > date_for_rollback }.delete
+
+        oplog_based_models.each do |model|
+          model.operation_klass.where { operation_date > date_for_rollback }.delete
+        end
+
+        if keep
+          TariffSynchronizer::TaricUpdate.applied_or_failed.where { issue_date > date_for_rollback }.each do |taric_update|
+            taric_update.mark_as_pending
+            taric_update.clear_applied_at
           end
-
-          if keep
-            TariffSynchronizer::TaricUpdate.applied_or_failed.where { issue_date > date_for_rollback }.each do |taric_update|
-              taric_update.mark_as_pending
-              taric_update.clear_applied_at
+          TariffSynchronizer::ChiefUpdate.applied_or_failed.where { issue_date > date_for_rollback }.each do |chief_update|
+            [Chief::Comm, Chief::Mfcm, Chief::Tame, Chief::Tamf, Chief::Tbl9].each do |chief_model|
+              chief_model.where(origin: chief_update.filename).delete
             end
-            TariffSynchronizer::ChiefUpdate.applied_or_failed.where { issue_date > date_for_rollback }.each do |chief_update|
-              [Chief::Comm, Chief::Mfcm, Chief::Tame, Chief::Tamf, Chief::Tbl9].each do |chief_model|
-                chief_model.where(origin: chief_update.filename).delete
-              end
 
-              chief_update.mark_as_pending
-              chief_update.clear_applied_at
+            chief_update.mark_as_pending
+            chief_update.clear_applied_at
+          end
+        else
+          TariffSynchronizer::TaricUpdate.where { issue_date > date }.delete
+          TariffSynchronizer::ChiefUpdate.where { issue_date > date }.each do |chief_update|
+            [Chief::Comm, Chief::Mfcm, Chief::Tame, Chief::Tamf, Chief::Tbl9].each do |chief_model|
+              chief_model.where(origin: chief_update.filename).delete
             end
-          else
-            TariffSynchronizer::TaricUpdate.where { issue_date > date }.delete
-            TariffSynchronizer::ChiefUpdate.where { issue_date > date }.each do |chief_update|
-              [Chief::Comm, Chief::Mfcm, Chief::Tame, Chief::Tamf, Chief::Tbl9].each do |chief_model|
-                chief_model.where(origin: chief_update.filename).delete
-              end
 
-              chief_update.delete
-            end
+            chief_update.delete
           end
         end
       end
