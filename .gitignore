@@ -25,4 +25,3 @@ db/schema.rb
 spec/coverage
 .rbenv-version
 /spec/reports
-log/sync/*
