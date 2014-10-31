@@ -1,8 +1,5 @@
-require 'formatter'
-require 'declarable'
-
 class Commodity < GoodsNomenclature
-  include Model::Declarable
+  include Declarable
 
   plugin :oplog, primary_key: :goods_nomenclature_sid
   plugin :conformance_validator
